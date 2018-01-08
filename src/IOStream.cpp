@@ -1,6 +1,6 @@
 #include <iodrivers_base/IOStream.hpp>
 #include <iodrivers_base/Exceptions.hpp>
-#include <base-logging/Logging.hpp>
+//#include <base-logging/Logging.hpp>
 
 #include <sys/types.h> 
 #include <sys/stat.h> 
@@ -11,6 +11,16 @@
 #include <iostream>
 
 using namespace iodrivers_base;
+
+#define LOG_WARN_S std::cerr
+
+template<typename Duration>
+void to_timeval(Duration&& d, struct timeval & tv) {
+    std::chrono::seconds const sec = std::chrono::duration_cast<std::chrono::seconds>(d);
+
+    tv.tv_sec  = sec.count();
+    tv.tv_usec = std::chrono::duration_cast<std::chrono::microseconds>(d - sec).count();
+}
 
 IOStream::~IOStream() {}
 int IOStream::getFileDescriptor() const { return FDStream::INVALID_FD; }
@@ -30,26 +40,28 @@ FDStream::~FDStream()
     if (m_auto_close)
         ::close(m_fd);
 }
-void FDStream::waitRead(base::Time const& timeout)
+void FDStream::waitRead(std::chrono::system_clock::duration const& timeout)
 {
     fd_set set;
     FD_ZERO(&set);
     FD_SET(m_fd, &set);
-
-    timeval timeout_spec = { static_cast<time_t>(timeout.toSeconds()), suseconds_t(timeout.toMicroseconds() % 1000000)};
+    
+    timeval timeout_spec;
+    to_timeval(timeout,timeout_spec);
     int ret = select(m_fd + 1, &set, NULL, NULL, &timeout_spec);
     if (ret < 0 && errno != EINTR)
         throw UnixError("waitRead(): error in select()");
     else if (ret == 0)
         throw TimeoutError(TimeoutError::NONE, "waitRead(): timeout");
 }
-void FDStream::waitWrite(base::Time const& timeout)
+void FDStream::waitWrite(std::chrono::system_clock::duration const& timeout)
 {
     fd_set set;
     FD_ZERO(&set);
     FD_SET(m_fd, &set);
 
-    timeval timeout_spec = { static_cast<time_t>(timeout.toSeconds()), suseconds_t(timeout.toMicroseconds() % 1000000) };
+    timeval timeout_spec;
+    to_timeval(timeout,timeout_spec);
     int ret = select(m_fd + 1, NULL, &set, NULL, &timeout_spec);
     if (ret < 0 && errno != EINTR)
         throw UnixError("waitWrite(): error in select()");

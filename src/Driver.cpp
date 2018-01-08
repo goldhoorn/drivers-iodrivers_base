@@ -545,7 +545,7 @@ std::pair<uint8_t const*, int> Driver::findPacket(uint8_t const* buffer, int buf
 
     if (m_extract_last)
     {
-        m_stats.stamp = base::Time::now();
+        m_stats.stamp = std::chrono::system_clock::now();
         m_stats.bad_rx  += packet_start;
         m_stats.good_rx += packet_size;
     }
@@ -585,7 +585,7 @@ int Driver::doPacketExtraction(uint8_t* buffer)
     pair<uint8_t const*, int> packet = findPacket(internal_buffer, internal_buffer_size);
     if (!m_extract_last)
     {
-        m_stats.stamp = base::Time::now();
+        m_stats.stamp = std::chrono::system_clock::now();
         m_stats.bad_rx  += packet.first - internal_buffer;
         m_stats.good_rx += packet.second;
     }
@@ -676,26 +676,29 @@ bool Driver::hasPacket() const
     return (packet.second > 0);
 }
 
-void Driver::setReadTimeout(base::Time const& timeout)
+void Driver::setReadTimeout(std::chrono::system_clock::duration const& timeout)
 { m_read_timeout = timeout; }
-base::Time Driver::getReadTimeout() const
+std::chrono::system_clock::duration Driver::getReadTimeout() const
 { return m_read_timeout; }
 int Driver::readPacket(uint8_t* buffer, int buffer_size)
 {
     return readPacket(buffer, buffer_size, getReadTimeout());
 }
 int Driver::readPacket(uint8_t* buffer, int buffer_size,
-        base::Time const& packet_timeout)
+        std::chrono::system_clock::duration const& packet_timeout)
 {
     return readPacket(buffer, buffer_size, packet_timeout,
-            packet_timeout + base::Time::fromSeconds(1));
+            packet_timeout + std::chrono::seconds(1));
 }
 int Driver::readPacket(uint8_t* buffer, int buffer_size,
-        base::Time const& packet_timeout, base::Time const& first_byte_timeout)
+        std::chrono::system_clock::duration const& packet_timeout, std::chrono::system_clock::duration const& first_byte_timeout)
 {
-    return readPacket(buffer, buffer_size, packet_timeout.toMilliseconds(), 
-            first_byte_timeout.toMilliseconds());
+    return readPacket(buffer, buffer_size, 
+	std::chrono::duration_cast<std::chrono::milliseconds>(packet_timeout).count(), 
+	std::chrono::duration_cast<std::chrono::milliseconds>(first_byte_timeout).count()
+    );
 }
+
 int Driver::readPacket(uint8_t* buffer, int buffer_size, int packet_timeout, int first_byte_timeout)
 {
     if (first_byte_timeout > packet_timeout)
@@ -764,7 +767,7 @@ int Driver::readPacket(uint8_t* buffer, int buffer_size, int packet_timeout, int
         try {
             // calls select and waits until a new read can be actually performed (in the next
             // while-iteration)
-            m_stream->waitRead(base::Time::fromMicroseconds(remaining_timeout * 1000));
+            m_stream->waitRead(std::chrono::microseconds(remaining_timeout * 1000));
         }
         catch(TimeoutError& e)
         {
@@ -776,17 +779,17 @@ int Driver::readPacket(uint8_t* buffer, int buffer_size, int packet_timeout, int
     }
 }
 
-void Driver::setWriteTimeout(base::Time const& timeout)
+void Driver::setWriteTimeout(std::chrono::system_clock::duration const& timeout)
 { m_write_timeout = timeout; }
-base::Time Driver::getWriteTimeout() const
+std::chrono::system_clock::duration Driver::getWriteTimeout() const
 { return m_write_timeout; }
 
 bool Driver::writePacket(uint8_t const* buffer, int buffer_size)
 {
     return writePacket(buffer, buffer_size, getWriteTimeout());
 }
-bool Driver::writePacket(uint8_t const* buffer, int buffer_size, base::Time const& timeout)
-{ return writePacket(buffer, buffer_size, timeout.toMilliseconds()); }
+bool Driver::writePacket(uint8_t const* buffer, int buffer_size, std::chrono::system_clock::duration const& timeout)
+{ return writePacket(buffer, buffer_size, std::chrono::duration_cast<std::chrono::milliseconds>(timeout).count()); }
 bool Driver::writePacket(uint8_t const* buffer, int buffer_size, int timeout)
 {
     if(!m_stream)
@@ -801,7 +804,7 @@ bool Driver::writePacket(uint8_t const* buffer, int buffer_size, int timeout)
         written += c;
 
         if (written == buffer_size) {
-            m_stats.stamp = base::Time::now();
+            m_stats.stamp = std::chrono::system_clock::now();
 	    m_stats.tx += buffer_size;
             return true;
         }
@@ -810,7 +813,7 @@ bool Driver::writePacket(uint8_t const* buffer, int buffer_size, int timeout)
             throw TimeoutError(TimeoutError::PACKET, "writePacket(): timeout");
 
         int remaining_timeout = time_out.timeLeft();
-        m_stream->waitWrite(base::Time::fromMicroseconds(remaining_timeout * 1000));
+        m_stream->waitWrite(std::chrono::microseconds(remaining_timeout * 1000));
     }
 }
 

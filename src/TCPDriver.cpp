@@ -1,4 +1,4 @@
-#include "TCPDriver.hpp"
+#include "iodrivers_base/TCPDriver.hpp"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -71,7 +71,7 @@ int TCPDriver::readPacket(uint8_t* buffer, int bufsize){
         return 0;
 }
     
-int TCPDriver::readPacket(uint8_t* buffer, int bufsize, base::Time const& packet_timeout, base::Time const& first_byte_timeout){
+int TCPDriver::readPacket(uint8_t* buffer, int bufsize, std::chrono::system_clock::duration const& packet_timeout, std::chrono::system_clock::duration const& first_byte_timeout){
     checkClientConnection();
     if(client_fd){
         int res = 0;
@@ -91,7 +91,7 @@ int TCPDriver::readPacket(uint8_t* buffer, int bufsize, base::Time const& packet
     }else 
         return 0;
 }
-bool TCPDriver::writePacket(uint8_t const* buffer, int bufsize, base::Time const& timeout){
+bool TCPDriver::writePacket(uint8_t const* buffer, int bufsize, std::chrono::system_clock::duration const& timeout){
     checkClientConnection();
     if(client_fd){
         bool res = false;

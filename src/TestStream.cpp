@@ -23,12 +23,12 @@ vector<uint8_t> TestStream::readDataFromDriver()
     return temp;
 }
 
-void TestStream::waitRead(base::Time const& timeout)
+void TestStream::waitRead(std::chrono::system_clock::duration const& timeout)
 {
     if (to_driver.empty())
         throw TimeoutError(TimeoutError::NONE, "no data in to_device");
 }
-void TestStream::waitWrite(base::Time const& timeout)
+void TestStream::waitWrite(std::chrono::system_clock::duration const& timeout)
 {
 }
 
